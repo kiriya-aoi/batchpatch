@@ -147,7 +147,7 @@ class BatchPatch:
             '--patch-pattern',
             action='store',
             help='The filename to use for the patch files. Consult README.md for available variables.',
-            default='{name}{specifier_items[0]}_{ep}_v{v_old}v{v_new}.vcdiff',
+            default='{name}_{ep}_v{v_old}v{v_new}.vcdiff',
             metavar='name'
         )
         parser.add_argument(
@@ -451,10 +451,9 @@ class BatchPatch:
         for file in [self.create_file_entity(f, old_dir) for f in old_files]:
             if file is not None:
                 self.logger.log('Found potential source file: {}'.format(file['filename']), LogLevel.debug)
-                self.logger.log('  Group {}, series {}, type {} {}, episode {}, version {}'.format(
+                self.logger.log('  Group {}, series {}, type {}, episode {}, version {}'.format(
                     file['group'],
                     file['name'],
-                    file['specifier'],
                     file['ext'],
                     file['ep'],
                     file['ver']
@@ -471,10 +470,9 @@ class BatchPatch:
                 key = file.get('key')
                 if key in filemap:
                     self.logger.log('Found potential target file: {}'.format(file['filename']), LogLevel.debug)
-                    self.logger.log('  Group {}, series {}, type {} {}, episode {}, version {}'.format(
+                    self.logger.log('  Group {}, series {}, type {}, episode {}, version {}'.format(
                         file['group'],
                         file['name'],
-                        file['specifier'],
                         file['ext'],
                         file['ep'],
                         file['ver']
@@ -531,16 +529,10 @@ class BatchPatch:
                 raw_group=source['group'],
                 raw_name=source['name'],
                 raw_ep=source['ep'],
-                raw_specifier=source['specifier'],
                 raw_ext=source['ext'],
                 group=BatchPatch.neutralize_str(source['group']),
                 name=BatchPatch.neutralize_str(source['name']),
                 ep=BatchPatch.neutralize_str(source['ep']),
-                specifier=BatchPatch.neutralize_str(source['specifier']),
-                specifier_items=[BatchPatch.neutralize_str(s) for s in (
-                    source['specifier'].split() if len(source['specifier']) > 0 else ['']
-                )],
-                type=BatchPatch.neutralize_str(source['specifier'] + source['ext']),
                 ext=BatchPatch.neutralize_str(source['ext']),
                 v_old=source['ver'],
                 v_new=target['ver'],
@@ -553,16 +545,16 @@ class BatchPatch:
 
     @staticmethod
     def create_file_entity(filename, basedir):
-        matcher = re.compile('(?#1. Group shortname)(?:\[([^\]]+?)\] )?'
-                             '(?#2. Main name)(.+?)'
-                             '(?#3. Episode specifier)(?: - ([a-zA-Z]*\d*))?'
-                             '(?#4. Version specifier)(?:v(\d*))?'
-                             '(?#5. Other specifiers)(?: \(([^\)]*)\))?'
-                             '(?#6. CRC hash)(?: \[([0-9a-fA-F]{8})\])?'
-                             '(?#   Eat all extension-looking parts except the last one)(?:\..+)?'
-                             '\.'
-                             '(?#   Do not match torrents)(?!torrent$)'
-                             '(?#7. Get the file extension)([^\.]+)$')
+        matcher = re.compile(r'(?#1. Group shortname)(?:\[([^\]]+?)\] )?'
+                             r'(?#2. Main name)(.+?)'
+                             r'(?#3. Episode specifier)(?: - ([a-zA-Z]*\d*))?'
+                             r'(?#4. Version specifier)(?:v(\d*))?'
+                             r'(?#   Other specifiers)(?: \(([^\)]*)\))?'
+                             r'(?#5. CRC hash)(?: \[([0-9a-fA-F]{8})\])?'
+                             r'(?#   Eat all extension-looking parts except the last one)(?:\..+)?'
+                             r'\.'
+                             r'(?#   Do not match torrents)(?!torrent$)'
+                             r'(?#6. Get the file extension)([^\.]+)$')
 
         match = matcher.match(filename)
         if match:
@@ -570,19 +562,15 @@ class BatchPatch:
             ver = match.group(4)
             if ver is None:
                 ver = 1
-            specifier = match.group(5)
-            if specifier is None:
-                specifier = ''
 
             return {
-                "key": "/".join([match.group(x) for x in [1, 2, 3, 5, 7] if isinstance(match.group(x), str)]),
+                "key": "/".join([match.group(x) for x in [1, 2, 3, 7] if isinstance(match.group(x), str)]),
                 "ver": int(ver),
                 "group": match.group(1),
                 "name": match.group(2),
                 "ep": match.group(3),
-                "specifier": specifier,
-                "crc": match.group(6),
-                "ext": match.group(7),
+                "crc": match.group(5),
+                "ext": match.group(6),
                 "filename": path
             }
         else:
